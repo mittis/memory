@@ -230,4 +230,6 @@ Personal use only. Designed for educational and recreational purposes.
 
 ## Author
 
+**Gerhard Mitterlechner**
+
 Created with ❤️ for kids and memory enthusiasts!

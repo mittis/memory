@@ -220,12 +220,6 @@ function checkMatch() {
  * @param {number} idx2 - Second card index
  * @param {Object} data - Server response with match data
  */
-/**
- * Handle successful card match: show expansion, vanish cards.
- * @param {number} idx1 - First card index
- * @param {number} idx2 - Second card index
- * @param {Object} data - Server response with match data
- */
 function handleMatchLogic(idx1, idx2, data) {
     if (!data.image1 || !data.image2) {
         console.error('Missing images in match response');
