@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zuschneiden auf Quadrat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Signika+Negative:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Fredoka', 'Signika Negative', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .crop-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .instruction {
+            color: #666;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .crop-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        #image {
+            max-width: 100%;
+            display: block;
+            cursor: move;
+            border-radius: 10px;
+        }
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        .crop-square {
+            position: absolute;
+            border: 3px dashed #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+            cursor: move;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #okButton {
+            background: #48bb78;
+            color: white;
+        }
+        #okButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+        #okButton:active {
+            transform: scale(0.98);
+        }
+        #cancelButton {
+            background: #f56565;
+            color: white;
+        }
+        #cancelButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(245, 101, 101, 0.4);
+        }
+        #cancelButton:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="crop-container">
+        <h1>✂️ Zuschneiden auf Quadrat</h1>
+        <p class="instruction" id="instruction">Verschiebe das Quadrat, um den besten Teil des Bildes zu wählen. Drücke ENTER oder klicke OK.</p>
+        <div class="crop-wrapper">
+            <img id="image" src="/img/{{ filename }}" alt="Image to crop">
+            <div class="crop-overlay" id="overlay"></div>
+            <div class="crop-square" id="cropSquare"></div>
+        </div>
+        <div class="button-group">
+            <button id="okButton">✓ OK</button>
+        </div>
+    </div>
+
+    <script>
+        const filename = '{{ filename }}';
+        const image = document.getElementById('image');
+        const cropSquare = document.getElementById('cropSquare');
+        const overlay = document.getElementById('overlay');
+        let cropBox = { x: 0, y: 0, size: 0 };
+        let isDragging = false;
+
+        async function initCrop() {
+            const response = await fetch(`/api/image/dimensions/${filename}`);
+            const dims = await response.json();
+            
+            const size = Math.min(dims.width, dims.height);
+            cropBox.size = size;
+            cropBox.x = (dims.width - size) / 2;
+            cropBox.y = (dims.height - size) / 2;
+            
+            updateCropSquare();
+        }
+
+        function updateCropSquare() {
+            const rect = image.getBoundingClientRect();
+            const scaleX = rect.width / image.naturalWidth;
+            const scaleY = rect.height / image.naturalHeight;
+
+            cropSquare.style.width = (cropBox.size * scaleX) + 'px';
+            cropSquare.style.height = (cropBox.size * scaleY) + 'px';
+            cropSquare.style.left = (cropBox.x * scaleX) + 'px';
+            cropSquare.style.top = (cropBox.y * scaleY) + 'px';
+
+            overlay.style.width = rect.width + 'px';
+            overlay.style.height = rect.height + 'px';
+        }
+
+        cropSquare.addEventListener('mousedown', () => { isDragging = true; });
+        document.addEventListener('mouseup', () => { isDragging = false; });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = image.getBoundingClientRect();
+            const scaleX = image.naturalWidth / rect.width;
+            const scaleY = image.naturalHeight / rect.height;
+
+            const offsetX = (e.clientX - rect.left) * scaleX;
+            const offsetY = (e.clientY - rect.top) * scaleY;
+
+            cropBox.x = Math.max(0, Math.min(offsetX - cropBox.size / 2, image.naturalWidth - cropBox.size));
+            cropBox.y = Math.max(0, Math.min(offsetY - cropBox.size / 2, image.naturalHeight - cropBox.size));
+
+            updateCropSquare();
+        });
+
+        document.getElementById('okButton').addEventListener('click', async () => {
+            const response = await fetch('/api/image/crop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename, crop_box: cropBox })
+            });
+            const data = await response.json();
+            
+            if (data.next_image) {
+                // More images to crop
+                window.location.href = `/crop/${data.next_image}`;
+            } else {
+                // All crops done, start game (with ?continue to skip reset)
+                window.location.href = '/?continue=1';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('okButton').click();
+            }
+        });
+
+        window.addEventListener('resize', updateCropSquare);
+        image.onload = initCrop;
+    </script>
+</body>
+</html>

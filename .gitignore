@@ -140,6 +140,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+myenv/
 ENV/
 env.bak/
 venv.bak/
@@ -193,6 +194,22 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Image files in img directory (keep only reference images and documentation)
+img/*.png
+img/*.PNG
+img/*.jpg
+img/*.JPG
+img/*.jpeg
+img/*.JPEG
+img/*.gif
+img/*.GIF
+img/*.webp
+img/*.WEBP
+# Also ignore auto-generated cropped images
+img/squared/
+# But preserve the markdown file that documents the folder
+!img/PUT_YOUR_PHOTOS_HERE.md
 
 # Cursor
 #  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
